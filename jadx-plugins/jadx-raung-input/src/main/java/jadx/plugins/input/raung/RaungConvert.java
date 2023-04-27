@@ -1,10 +1,8 @@
 package jadx.plugins.input.raung;
 
 import java.io.Closeable;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
+import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,18 +17,19 @@ public class RaungConvert implements Closeable {
 	private static final Logger LOG = LoggerFactory.getLogger(RaungConvert.class);
 
 	@Nullable
-	private Path tmpJar;
+	private File tmpJar;
 
-	public boolean execute(List<Path> input) {
-		List<Path> raungInputs = filterRaungFiles(input);
+	public boolean execute(List<File> input) {
+		List<Path> inputPaths = input.stream().map(File::toPath).collect(Collectors.toList());
+		List<File> raungInputs = filterRaungFiles(input);
 		if (raungInputs.isEmpty()) {
 			return false;
 		}
 		try {
-			this.tmpJar = Files.createTempFile("jadx-raung-", ".jar");
+			this.tmpJar = File.createTempFile("jadx-raung-", ".jar");
 			RaungAsm.create()
-					.output(tmpJar)
-					.inputs(input)
+					.output(tmpJar.toPath())
+					.inputs(inputPaths)
 					.execute();
 			return true;
 		} catch (Exception e) {
@@ -40,14 +39,13 @@ public class RaungConvert implements Closeable {
 		return false;
 	}
 
-	private List<Path> filterRaungFiles(List<Path> input) {
-		PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:**.raung");
+	private List<File> filterRaungFiles(List<File> input) {
 		return input.stream()
-				.filter(matcher::matches)
+				.filter(file -> file.getName().endsWith(".raung"))
 				.collect(Collectors.toList());
 	}
 
-	public List<Path> getFiles() {
+	public List<File> getFiles() {
 		if (tmpJar == null) {
 			return Collections.emptyList();
 		}
@@ -56,12 +54,8 @@ public class RaungConvert implements Closeable {
 
 	@Override
 	public void close() {
-		try {
-			if (tmpJar != null) {
-				Files.deleteIfExists(tmpJar);
-			}
-		} catch (Exception e) {
-			LOG.error("Failed to remove tmp jar file: {}", tmpJar, e);
+		if (tmpJar != null && tmpJar.exists() && !tmpJar.delete()) {
+			LOG.error("Failed to remove tmp jar file: {}", tmpJar);
 		}
 	}
 }

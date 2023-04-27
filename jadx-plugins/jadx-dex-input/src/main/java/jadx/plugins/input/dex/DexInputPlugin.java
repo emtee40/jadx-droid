@@ -1,8 +1,8 @@
 package jadx.plugins.input.dex;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,11 +32,11 @@ public class DexInputPlugin implements JadxPlugin {
 		context.addCodeInput(this::loadFiles);
 	}
 
-	public ICodeLoader loadFiles(List<Path> input) {
+	public ICodeLoader loadFiles(List<File> input) {
 		return loadFiles(input, null);
 	}
 
-	public ICodeLoader loadFiles(List<Path> inputFiles, @Nullable Closeable closeable) {
+	public ICodeLoader loadFiles(List<File> inputFiles, @Nullable Closeable closeable) {
 		List<DexReader> dexReaders = loader.collectDexFiles(inputFiles);
 		if (dexReaders.isEmpty()) {
 			return EmptyCodeLoader.INSTANCE;

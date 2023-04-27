@@ -2,7 +2,6 @@ package jadx.api;
 
 import java.io.Closeable;
 import java.io.File;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -83,7 +82,7 @@ public class JadxArgs implements Closeable {
 	 */
 	private boolean includeDependencies = false;
 
-	private Path userRenamesMappingsPath = null;
+	private File userRenamesMappingsPath = null;
 	private UserRenamesMappingsMode userRenamesMappingsMode = UserRenamesMappingsMode.getDefault();
 
 	private boolean deobfuscationOn = false;
@@ -345,11 +344,11 @@ public class JadxArgs implements Closeable {
 		this.classFilter = classFilter;
 	}
 
-	public Path getUserRenamesMappingsPath() {
+	public File getUserRenamesMappingsPath() {
 		return userRenamesMappingsPath;
 	}
 
-	public void setUserRenamesMappingsPath(Path path) {
+	public void setUserRenamesMappingsPath(File path) {
 		this.userRenamesMappingsPath = path;
 	}
 

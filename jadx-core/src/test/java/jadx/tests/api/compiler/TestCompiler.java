@@ -49,12 +49,12 @@ public class TestCompiler implements Closeable {
 		fileManager = new ClassFileManager(compiler.getStandardFileManager(null, null, null));
 	}
 
-	public List<File> compileFiles(List<File> sourceFiles, Path outTmp) throws IOException {
+	public List<File> compileFiles(List<File> sourceFiles, File outTmp) throws IOException {
 		compile(fileManager.getJavaFileObjectsFromFiles(sourceFiles));
 		List<File> files = new ArrayList<>();
 		for (JavaClassObject classObject : fileManager.getClassLoader().getClassObjects()) {
-			Path path = outTmp.resolve(classObject.getName().replace('.', '/') + ".class");
-			FileUtils.makeDirsForFile(path);
+			Path path = outTmp.toPath().resolve(classObject.getName().replace('.', '/') + ".class");
+			FileUtils.makeDirsForFile(path.toFile());
 			Files.write(path, classObject.getBytes());
 			files.add(path.toFile());
 		}

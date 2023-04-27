@@ -1,6 +1,6 @@
 package jadx.plugins.input.raung;
 
-import java.nio.file.Path;
+import java.io.File;
 import java.util.List;
 
 import jadx.api.plugins.JadxPlugin;
@@ -27,7 +27,7 @@ public class RaungInputPlugin implements JadxPlugin, JadxCodeInput {
 	}
 
 	@Override
-	public ICodeLoader loadFiles(List<Path> input) {
+	public ICodeLoader loadFiles(List<File> input) {
 		RaungConvert convert = new RaungConvert();
 		if (!convert.execute(input)) {
 			return EmptyCodeLoader.INSTANCE;

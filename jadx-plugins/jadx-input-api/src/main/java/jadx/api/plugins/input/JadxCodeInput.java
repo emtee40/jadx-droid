@@ -1,8 +1,8 @@
 package jadx.api.plugins.input;
 
-import java.nio.file.Path;
+import java.io.File;
 import java.util.List;
 
 public interface JadxCodeInput {
-	ICodeLoader loadFiles(List<Path> input);
+	ICodeLoader loadFiles(List<File> input);
 }

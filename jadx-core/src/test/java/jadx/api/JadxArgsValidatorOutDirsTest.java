@@ -66,7 +66,7 @@ public class JadxArgsValidatorOutDirsTest {
 
 	private JadxArgs makeArgs() {
 		JadxArgs args = new JadxArgs();
-		args.getInputFiles().add(FileUtils.createTempFile("some.apk").toFile());
+		args.getInputFiles().add(FileUtils.createTempFile("some.apk"));
 		return args;
 	}
 }

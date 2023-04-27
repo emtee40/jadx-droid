@@ -1,9 +1,7 @@
 package jadx.core.xmlgen;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.io.FileOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +68,7 @@ public class ResourcesSaver implements Runnable {
 				byte[] data = rc.getDecodedData();
 				FileUtils.makeDirsForFile(outFile);
 				try {
-					Files.write(outFile.toPath(), data);
+					FileUtils.write(outFile, data, false);
 				} catch (Exception e) {
 					LOG.warn("Resource '{}' not saved, got exception", rc.getName(), e);
 				}
@@ -94,11 +92,10 @@ public class ResourcesSaver implements Runnable {
 
 	private void saveResourceFile(ResourceFile resFile, File outFile) throws JadxException {
 		ResourcesLoader.decodeStream(resFile, (size, is) -> {
-			Path target = outFile.toPath();
-			try {
-				Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING);
+			try (FileOutputStream os = new FileOutputStream(outFile)) {
+				FileUtils.copyStream(is, os);
 			} catch (Exception e) {
-				Files.deleteIfExists(target); // delete partially written file
+				outFile.delete(); // delete partially written file
 				throw new JadxRuntimeException("Resource file save error", e);
 			}
 			return null;

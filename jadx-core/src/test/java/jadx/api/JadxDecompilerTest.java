@@ -20,7 +20,7 @@ public class JadxDecompilerTest {
 	@Test
 	public void testExampleUsage() {
 		File sampleApk = getFileFromSampleDir("app-with-fake-dex.apk");
-		File outDir = FileUtils.createTempDir("jadx-usage-example").toFile();
+		File outDir = FileUtils.createTempDir("jadx-usage-example");
 
 		// test simple apk loading
 		JadxArgs args = new JadxArgs();

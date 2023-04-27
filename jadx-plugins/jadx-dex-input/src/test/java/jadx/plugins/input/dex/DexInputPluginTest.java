@@ -1,5 +1,6 @@
 package jadx.plugins.input.dex;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,7 +38,7 @@ class DexInputPluginTest {
 	private static void processFile(Path sample) throws IOException {
 		System.out.println("Input file: " + sample.toAbsolutePath());
 		long start = System.currentTimeMillis();
-		List<Path> files = Collections.singletonList(sample);
+		List<File> files = Collections.singletonList(sample.toFile());
 		try (ICodeLoader result = new DexInputPlugin().loadFiles(files)) {
 			AtomicInteger count = new AtomicInteger();
 			result.visitClasses(cls -> {

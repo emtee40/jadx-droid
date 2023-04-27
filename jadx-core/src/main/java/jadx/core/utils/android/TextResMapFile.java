@@ -1,11 +1,11 @@
 package jadx.core.utils.android;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import jadx.core.utils.exceptions.JadxRuntimeException;
+import jadx.core.utils.files.FileUtils;
 
 public class TextResMapFile {
 	private static final int SPLIT_POS = 8;
@@ -39,22 +40,22 @@ public class TextResMapFile {
 		resMap.put(id, name);
 	}
 
-	public static Map<Integer, String> read(Path resMapFile) {
-		try (InputStream in = Files.newInputStream(resMapFile)) {
+	public static Map<Integer, String> read(File resMapFile) {
+		try (InputStream in = new FileInputStream(resMapFile)) {
 			return read(in);
 		} catch (Exception e) {
 			throw new JadxRuntimeException("Failed to read res-map file", e);
 		}
 	}
 
-	public static void write(Path resMapFile, Map<Integer, String> inputResMap) {
+	public static void write(File resMapFile, Map<Integer, String> inputResMap) {
 		try {
 			Map<Integer, String> resMap = new TreeMap<>(inputResMap);
 			List<String> lines = new ArrayList<>(resMap.size());
 			for (Map.Entry<Integer, String> entry : resMap.entrySet()) {
 				lines.add(String.format("%08x=%s", entry.getKey(), entry.getValue()));
 			}
-			Files.write(resMapFile, lines, StandardCharsets.UTF_8);
+			FileUtils.write(resMapFile, lines, StandardCharsets.UTF_8, false);
 		} catch (Exception e) {
 			throw new JadxRuntimeException("Failed to write res-map file", e);
 		}

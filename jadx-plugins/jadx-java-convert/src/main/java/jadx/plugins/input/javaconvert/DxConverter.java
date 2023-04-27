@@ -1,7 +1,7 @@
 package jadx.plugins.input.javaconvert;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.file.Path;
+import java.io.File;
 
 import com.android.dx.command.dexer.DxContext;
 import com.android.dx.command.dexer.Main;
@@ -27,7 +27,7 @@ public class DxConverter {
 		}
 	}
 
-	public static void run(Path path, Path tempDirectory) {
+	public static void run(File path, File tempDirectory) {
 		int result;
 		String dxErrors;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -35,8 +35,8 @@ public class DxConverter {
 			DxContext context = new DxContext(out, errOut);
 			DxArgs args = new DxArgs(
 					context,
-					tempDirectory.toAbsolutePath().toString(),
-					new String[] { path.toAbsolutePath().toString() });
+					tempDirectory.getAbsolutePath(),
+					new String[] {path.getAbsolutePath()});
 			result = new Main(context).runDx(args);
 			dxErrors = errOut.toString(CHARSET_NAME);
 		} catch (Exception e) {

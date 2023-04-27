@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -35,9 +34,8 @@ public class DexFileLoader {
 		resetDexUniqId();
 	}
 
-	public List<DexReader> collectDexFiles(List<Path> pathsList) {
+	public List<DexReader> collectDexFiles(List<File> pathsList) {
 		return pathsList.stream()
-				.map(Path::toFile)
 				.map(this::loadDexFromFile)
 				.filter(list -> !list.isEmpty())
 				.flatMap(Collection::stream)

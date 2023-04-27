@@ -1,16 +1,16 @@
 package jadx.plugins.input.javaconvert;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import org.objectweb.asm.ClassReader;
 
 public class AsmUtils {
 
-	public static String getNameFromClassFile(Path file) throws IOException {
-		try (InputStream in = Files.newInputStream(file)) {
+	public static String getNameFromClassFile(File file) throws IOException {
+		try (InputStream in = new FileInputStream(file)) {
 			return getClassFullName(new ClassReader(in));
 		}
 	}

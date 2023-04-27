@@ -1,12 +1,13 @@
 package jadx.plugins.input.java.utils;
 
+import android.os.Build;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -32,19 +33,23 @@ public class DisasmUtils {
 	 */
 	private static String useSystemJavaP(byte[] bytes) {
 		try {
-			Path tmpCls = null;
+			File tmpCls = null;
 			try {
-				tmpCls = Files.createTempFile("jadx", ".class");
-				Files.write(tmpCls, bytes, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+				tmpCls = File.createTempFile("jadx", ".class");
+				try (FileOutputStream os = new FileOutputStream(tmpCls)) {
+					os.write(bytes);
+				}
 				Process process = Runtime.getRuntime().exec(new String[] {
 						"javap", "-constants", "-v", "-p", "-c",
-						tmpCls.toAbsolutePath().toString()
+						tmpCls.getAbsolutePath()
 				});
-				process.waitFor(2, TimeUnit.SECONDS);
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+					process.waitFor(2, TimeUnit.SECONDS);
+				} else process.wait(2000);
 				return inputStreamToString(process.getInputStream());
 			} finally {
 				if (tmpCls != null) {
-					Files.delete(tmpCls);
+					tmpCls.delete();
 				}
 			}
 		} catch (Exception e) {

@@ -2,11 +2,10 @@ package jadx.api.plugins.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Set;
 
 import org.jetbrains.annotations.Nullable;
@@ -17,7 +16,6 @@ public class CommonFileUtils {
 
 	private static final Logger LOG = LoggerFactory.getLogger(CommonFileUtils.class);
 	public static final File CWD = getCWD();
-	public static final Path CWD_PATH = CWD.toPath();
 
 	private static File getCWD() {
 		try {
@@ -27,13 +25,13 @@ public class CommonFileUtils {
 		}
 	}
 
-	public static Path saveToTempFile(InputStream in, String suffix) throws IOException {
+	public static File saveToTempFile(InputStream in, String suffix) throws IOException {
 		return saveToTempFile(null, in, suffix);
 	}
 
-	public static Path saveToTempFile(byte[] dataPrefix, InputStream in, String suffix) throws IOException {
-		Path tempFile = Files.createTempFile("jadx-temp-", suffix);
-		try (OutputStream out = Files.newOutputStream(tempFile)) {
+	public static File saveToTempFile(byte[] dataPrefix, InputStream in, String suffix) throws IOException {
+		File tempFile = File.createTempFile("jadx-temp-", suffix);
+		try (OutputStream out = new FileOutputStream(tempFile)) {
 			if (dataPrefix != null) {
 				out.write(dataPrefix);
 			}

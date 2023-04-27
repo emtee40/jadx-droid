@@ -1,6 +1,10 @@
 package jadx.plugins.mappings.load;
 
-import java.nio.file.Path;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.Collections;
 
 import net.fabricmc.mappingio.MappingReader;
@@ -38,10 +42,10 @@ public class LoadMappingsPass implements JadxPreparePass {
 	}
 
 	private MappingTree loadMapping(JadxArgs args) {
-		try {
-			Path mappingsPath = args.getUserRenamesMappingsPath();
+		File mappingsPath = args.getUserRenamesMappingsPath();
+		try (Reader reader = new BufferedReader(new InputStreamReader(new FileInputStream(mappingsPath)))) {
 			MemoryMappingTree mappingTree = new MemoryMappingTree();
-			MappingReader.read(mappingsPath, options.getFormat(), mappingTree);
+			MappingReader.read(reader, options.getFormat(), mappingTree);
 			if (mappingTree.getSrcNamespace() == null) {
 				mappingTree.setSrcNamespace(MappingUtil.NS_SOURCE_FALLBACK);
 			}

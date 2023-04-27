@@ -258,7 +258,7 @@ public class TypeSearch {
 			varInfo.setTypeResolved(false);
 			varInfo.setCurrentType(ArgType.UNKNOWN);
 			ArrayList<ArgType> types = new ArrayList<>(candidateTypes);
-			types.sort(typeCompare.getReversedComparator());
+			Collections.sort(types, typeCompare.getReversedComparator());
 			varInfo.setCandidateTypes(Collections.unmodifiableList(types));
 		}
 	}

@@ -1,5 +1,7 @@
 package jadx.api.metadata.impl;
 
+import android.os.Build;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
@@ -29,7 +31,10 @@ public class CodeMetadataStorage implements ICodeMetadata {
 	}
 
 	public static ICodeMetadata empty() {
-		return new CodeMetadataStorage(Collections.emptyMap(), Collections.emptyNavigableMap());
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			return new CodeMetadataStorage(Collections.emptyMap(), Collections.emptyNavigableMap());
+		}
+		return new CodeMetadataStorage(Collections.emptyMap(), new TreeMap<>());
 	}
 
 	private final Map<Integer, Integer> lines;

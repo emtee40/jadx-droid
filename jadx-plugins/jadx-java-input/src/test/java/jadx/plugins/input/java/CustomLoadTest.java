@@ -1,10 +1,9 @@
 package jadx.plugins.input.java;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,7 +36,7 @@ class CustomLoadTest {
 
 	@Test
 	void loadFiles() {
-		List<Path> files = Stream.of("HelloWorld.class", "HelloWorld$HelloInner.class")
+		List<File> files = Stream.of("HelloWorld.class", "HelloWorld$HelloInner.class")
 				.map(this::getSample)
 				.collect(Collectors.toList());
 		ICodeLoader loadResult = JavaInputPlugin.loadClassFiles(files);
@@ -51,7 +50,7 @@ class CustomLoadTest {
 	@Test
 	void loadFromInputStream() throws IOException {
 		String fileName = "HelloWorld$HelloInner.class";
-		try (InputStream in = Files.newInputStream(getSample(fileName))) {
+		try (InputStream in = Files.newInputStream(getSample(fileName).toPath())) {
 			ICodeLoader loadResult = JavaInputPlugin.loadFromInputStream(in, fileName);
 			loadDecompiler(loadResult);
 			assertThat(jadx.getClassesWithInners())
@@ -65,7 +64,7 @@ class CustomLoadTest {
 	@Test
 	void loadSingleClass() throws IOException {
 		String fileName = "HelloWorld.class";
-		byte[] content = Files.readAllBytes(getSample(fileName));
+		byte[] content = Files.readAllBytes(getSample(fileName).toPath());
 		ICodeLoader loadResult = JavaInputPlugin.loadSingleClass(content, fileName);
 		loadDecompiler(loadResult);
 		assertThat(jadx.getClassesWithInners())
@@ -81,11 +80,11 @@ class CustomLoadTest {
 			List<JavaClassReader> inputs = new ArrayList<>(2);
 			try {
 				String hello = "HelloWorld.class";
-				byte[] content = Files.readAllBytes(getSample(hello));
+				byte[] content = Files.readAllBytes(getSample(hello).toPath());
 				inputs.add(loader.loadClass(content, hello));
 
 				String helloInner = "HelloWorld$HelloInner.class";
-				InputStream in = Files.newInputStream(getSample(helloInner));
+				InputStream in = Files.newInputStream(getSample(helloInner).toPath());
 				inputs.addAll(loader.loadInputStream(in, helloInner));
 			} catch (Exception e) {
 				fail(e);
@@ -119,9 +118,9 @@ class CustomLoadTest {
 		}
 	}
 
-	public Path getSample(String name) {
+	public File getSample(String name) {
 		try {
-			return Paths.get(ClassLoader.getSystemResource("samples/" + name).toURI());
+			return new File(ClassLoader.getSystemResource("samples/" + name).getFile());
 		} catch (Exception e) {
 			return fail(e);
 		}

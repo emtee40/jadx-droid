@@ -294,7 +294,7 @@ public class MethodGen {
 		try {
 			RegionGen regionGen = new RegionGen(this);
 			regionGen.makeRegion(code, mth.getRegion());
-		} catch (StackOverflowError | BootstrapMethodError e) {
+		} catch (StackOverflowError | LinkageError e) {
 			mth.addError("Method code generation error", new JadxOverflowException("StackOverflow"));
 			CodeGenUtils.addErrors(code, mth);
 			dumpInstructions(code);

@@ -198,7 +198,7 @@ public final class TypeUpdate {
 				updateInfo.rollbackUpdate(arg);
 			}
 			return result;
-		} catch (StackOverflowError | BootstrapMethodError error) {
+		} catch (StackOverflowError | LinkageError error) {
 			throw new JadxOverflowException("Type update terminated with stack overflow, arg: " + arg);
 		}
 	}

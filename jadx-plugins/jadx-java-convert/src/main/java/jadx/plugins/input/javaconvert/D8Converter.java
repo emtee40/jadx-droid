@@ -1,6 +1,6 @@
 package jadx.plugins.input.javaconvert;
 
-import java.nio.file.Path;
+import java.io.File;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,10 +16,10 @@ import com.android.tools.r8.OutputMode;
 public class D8Converter {
 	private static final Logger LOG = LoggerFactory.getLogger(D8Converter.class);
 
-	public static void run(Path path, Path tempDirectory, JavaConvertOptions options) throws CompilationFailedException {
+	public static void run(File path, File tempDirectory, JavaConvertOptions options) throws CompilationFailedException {
 		D8Command d8Command = D8Command.builder(new LogHandler())
-				.addProgramFiles(path)
-				.setOutput(tempDirectory, OutputMode.DexIndexed)
+				.addProgramFiles(path.toPath())
+				.setOutput(tempDirectory.toPath(), OutputMode.DexIndexed)
 				.setMode(CompilationMode.DEBUG)
 				.setMinApiLevel(30)
 				.setIntermediate(true)

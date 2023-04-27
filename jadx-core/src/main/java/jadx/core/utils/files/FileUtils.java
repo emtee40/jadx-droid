@@ -1,32 +1,27 @@
 package jadx.core.utils.files;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileVisitOption;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.jetbrains.annotations.NotNull;
@@ -48,10 +43,10 @@ public class FileUtils {
 	private FileUtils() {
 	}
 
-	public static List<Path> expandDirs(List<Path> paths) {
-		List<Path> files = new ArrayList<>(paths.size());
-		for (Path path : paths) {
-			if (Files.isDirectory(path)) {
+	public static List<File> expandDirs(List<File> paths) {
+		List<File> files = new ArrayList<>(paths.size());
+		for (File path : paths) {
+			if (path.isDirectory()) {
 				expandDir(path, files);
 			} else {
 				files.add(path);
@@ -60,9 +55,9 @@ public class FileUtils {
 		return files;
 	}
 
-	private static void expandDir(Path dir, List<Path> files) {
-		try (Stream<Path> walk = Files.walk(dir, FileVisitOption.FOLLOW_LINKS)) {
-			walk.filter(Files::isRegularFile).forEach(files::add);
+	private static void expandDir(File dir, List<File> files) {
+		try (Stream<File> walk = Stream.of(dir.listFiles())) {
+			walk.filter(file -> !file.isDirectory()).forEach(files::add);
 		} catch (Exception e) {
 			LOG.error("Failed to list files in directory: {}", dir, e);
 		}
@@ -76,12 +71,6 @@ public class FileUtils {
 
 			copyStream(in, jar);
 			jar.closeEntry();
-		}
-	}
-
-	public static void makeDirsForFile(Path path) {
-		if (path != null) {
-			makeDirs(path.toAbsolutePath().getParent().toFile());
 		}
 	}
 
@@ -103,65 +92,67 @@ public class FileUtils {
 		}
 	}
 
-	public static void makeDirs(@Nullable Path dir) {
-		if (dir != null) {
-			makeDirs(dir.toFile());
+	public static void deleteFileIfExists(File filePath) throws IOException {
+		filePath.delete();
+	}
+
+	public static boolean deleteDir(File file) {
+		boolean success = true;
+		if (file.isDirectory()) {
+			success = deleteContents(file);
 		}
+		return success && file.delete();
 	}
 
-	public static void deleteFileIfExists(Path filePath) throws IOException {
-		Files.deleteIfExists(filePath);
-	}
-
-	public static boolean deleteDir(File dir) {
-		deleteDir(dir.toPath());
-		return true;
-	}
-
-	public static void deleteDirIfExists(Path dir) {
-		if (Files.exists(dir)) {
-			try {
-				deleteDir(dir);
-			} catch (Exception e) {
-				LOG.error("Failed to delete dir: " + dir.toAbsolutePath(), e);
+	private static boolean deleteContents(File dir) {
+		File[] files = dir.listFiles();
+		boolean success = true;
+		if (files != null) {
+			for (File file : files) {
+				if (file.isDirectory()) {
+					success &= deleteContents(file);
+				}
+				if (!file.delete()) {
+					LOG.error("Failed to delete {}", file);
+					success = false;
+				}
 			}
 		}
+		return success;
 	}
 
-	private static final SimpleFileVisitor<Path> FILE_DELETE_VISITOR = new SimpleFileVisitor<Path>() {
-		@Override
-		public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-			Files.delete(file);
-			return FileVisitResult.CONTINUE;
-		}
-
-		@Override
-		public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-			Files.delete(dir);
-			return FileVisitResult.CONTINUE;
-		}
-	};
-
-	private static void deleteDir(Path dir) {
-		try {
-			Files.walkFileTree(dir, Collections.emptySet(), Integer.MAX_VALUE, FILE_DELETE_VISITOR);
-		} catch (Exception e) {
-			throw new JadxRuntimeException("Failed to delete directory " + dir, e);
+	public static void deleteDirIfExists(File dir) {
+		if (dir != null && dir.exists()) {
+			deleteDir(dir);
 		}
 	}
 
-	private static final Path TEMP_ROOT_DIR = createTempRootDir();
+	private static File tempRootDir;
 
-	private static Path createTempRootDir() {
+	public static void setTempRootDir(File tempRootDir) {
+		FileUtils.tempRootDir = tempRootDir;
+	}
+
+	public static File getTempRootDir() {
+		if (tempRootDir == null) {
+			tempRootDir = createTempRootDir();
+		}
+		return tempRootDir;
+	}
+
+	private static File createTempRootDir() {
 		try {
 			String jadxTmpDir = System.getenv("JADX_TMP_DIR");
-			Path dir;
+			File dir;
 			if (jadxTmpDir != null) {
-				dir = Files.createTempDirectory(Paths.get(jadxTmpDir), "jadx-instance-");
+				dir = new File(new File(jadxTmpDir), JADX_TMP_INSTANCE_PREFIX + System.currentTimeMillis());
 			} else {
-				dir = Files.createTempDirectory(JADX_TMP_INSTANCE_PREFIX);
+				dir = new File(JADX_TMP_INSTANCE_PREFIX + System.currentTimeMillis());
 			}
-			dir.toFile().deleteOnExit();
+			if (!dir.exists() && dir.mkdirs()) {
+				throw new IOException();
+			}
+			dir.deleteOnExit();
 			return dir;
 		} catch (Exception e) {
 			throw new JadxRuntimeException("Failed to create temp root directory", e);
@@ -169,39 +160,69 @@ public class FileUtils {
 	}
 
 	public static void deleteTempRootDir() {
-		deleteDirIfExists(TEMP_ROOT_DIR);
+		deleteDir(tempRootDir);
 	}
 
 	public static void clearTempRootDir() {
-		deleteDirIfExists(TEMP_ROOT_DIR);
-		makeDirs(TEMP_ROOT_DIR);
+		deleteDir(tempRootDir);
+		makeDirs(tempRootDir);
 	}
 
-	public static Path createTempDir(String prefix) {
+	public static File createTempDir(String prefix) {
 		try {
-			Path dir = Files.createTempDirectory(TEMP_ROOT_DIR, prefix);
-			dir.toFile().deleteOnExit();
+			File dir = new File(tempRootDir, prefix + System.currentTimeMillis());
+			if (dir.mkdirs()) {
+				throw new IOException();
+			}
+			dir.deleteOnExit();
 			return dir;
 		} catch (Exception e) {
 			throw new JadxRuntimeException("Failed to create temp directory with suffix: " + prefix, e);
 		}
 	}
 
-	public static Path createTempFile(String suffix) {
+	public static File createTempFile(String suffix) {
 		try {
-			Path path = Files.createTempFile(TEMP_ROOT_DIR, JADX_TMP_PREFIX, suffix);
-			path.toFile().deleteOnExit();
+			File path = File.createTempFile(JADX_TMP_PREFIX, suffix, tempRootDir);
+			path.deleteOnExit();
 			return path;
 		} catch (Exception e) {
 			throw new JadxRuntimeException("Failed to create temp file with suffix: " + suffix, e);
 		}
 	}
 
-	public static Path createTempFileNoDelete(String suffix) {
-		try {
-			return Files.createTempFile(Files.createTempDirectory("jadx-persist"), "jadx-", suffix);
-		} catch (Exception e) {
-			throw new JadxRuntimeException("Failed to create temp file with suffix: " + suffix, e);
+	public static List<String> readAllLines(File path, Charset cs) throws IOException {
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(path), cs))) {
+			List<String> result = new ArrayList<>();
+			String line;
+			while ((line = reader.readLine()) != null) {
+				result.add(line);
+			}
+			return result;
+		}
+	}
+
+	public static void write(File target, byte[] data, boolean append) throws IOException {
+		try (InputStream is = new ByteArrayInputStream(data);
+			 FileOutputStream os = new FileOutputStream(target, append)) {
+			copyStream(is, os);
+		}
+	}
+
+	public static void write(File target, Iterable<? extends CharSequence> lines, Charset charset, boolean append)
+			throws IOException {
+		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(target, append), charset))) {
+			for (CharSequence line: lines) {
+				writer.append(line);
+				writer.newLine();
+			}
+		}
+	}
+
+	public static void copy(File source, File target, boolean append) throws IOException {
+		try (FileInputStream is = new FileInputStream(source);
+			 FileOutputStream os = new FileOutputStream(target, append)) {
+			copyStream(is, os);
 		}
 	}
 
@@ -232,16 +253,6 @@ public class FileUtils {
 		} catch (IOException e) {
 			LOG.error("Close exception for {}", c, e);
 		}
-	}
-
-	public static void writeFile(Path file, String data) throws IOException {
-		FileUtils.makeDirsForFile(file);
-		Files.write(file, data.getBytes(StandardCharsets.UTF_8),
-				StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-	}
-
-	public static String readFile(Path textFile) throws IOException {
-		return new String(Files.readAllBytes(textFile), StandardCharsets.UTF_8);
 	}
 
 	@NotNull
@@ -319,8 +330,8 @@ public class FileUtils {
 		return false;
 	}
 
-	public static String getPathBaseName(Path file) {
-		String fileName = file.getFileName().toString();
+	public static String getPathBaseName(File file) {
+		String fileName = file.getName();
 		int extEndIndex = fileName.lastIndexOf('.');
 		if (extEndIndex == -1) {
 			return fileName;
@@ -335,22 +346,6 @@ public class FileUtils {
 		return new File(path);
 	}
 
-	public static List<Path> toPaths(List<File> files) {
-		return files.stream().map(File::toPath).collect(Collectors.toList());
-	}
-
-	public static List<Path> toPaths(File[] files) {
-		return Stream.of(files).map(File::toPath).collect(Collectors.toList());
-	}
-
-	public static List<Path> fileNamesToPaths(List<String> fileNames) {
-		return fileNames.stream().map(Paths::get).collect(Collectors.toList());
-	}
-
-	public static List<File> toFiles(List<Path> paths) {
-		return paths.stream().map(Path::toFile).collect(Collectors.toList());
-	}
-
 	public static String md5Sum(String str) {
 		return md5Sum(str.getBytes(StandardCharsets.UTF_8));
 	}
@@ -362,26 +357,6 @@ public class FileUtils {
 			return bytesToHex(md.digest());
 		} catch (Exception e) {
 			throw new JadxRuntimeException("Failed to build hash", e);
-		}
-	}
-
-	/**
-	 * Hash timestamps of input files
-	 */
-	public static String buildInputsHash(List<Path> inputPaths) {
-		try (ByteArrayOutputStream bout = new ByteArrayOutputStream();
-				DataOutputStream data = new DataOutputStream(bout)) {
-			List<Path> inputFiles = FileUtils.expandDirs(inputPaths);
-			Collections.sort(inputFiles);
-			data.write(inputPaths.size());
-			data.write(inputFiles.size());
-			for (Path inputFile : inputFiles) {
-				FileTime modifiedTime = Files.getLastModifiedTime(inputFile);
-				data.writeLong(modifiedTime.toMillis());
-			}
-			return FileUtils.md5Sum(bout.toByteArray());
-		} catch (Exception e) {
-			throw new JadxRuntimeException("Failed to build hash for inputs", e);
 		}
 	}
 }

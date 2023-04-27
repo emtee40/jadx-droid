@@ -1,17 +1,17 @@
 package jadx.core.clsp;
 
+import android.os.Build;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -170,26 +170,28 @@ public class ClsSet {
 		return cls;
 	}
 
-	public void save(Path path) throws IOException {
+	public void save(File path) throws IOException {
 		FileUtils.makeDirsForFile(path);
-		String outputName = path.getFileName().toString();
+		String outputName = path.getName();
 		if (outputName.endsWith(CLST_EXTENSION)) {
-			try (BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(path))) {
+			try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(path))) {
 				save(outputStream);
 			}
 		} else if (outputName.endsWith(".jar")) {
-			Path temp = FileUtils.createTempFile(".zip");
-			Files.copy(path, temp, StandardCopyOption.REPLACE_EXISTING);
+			File temp = FileUtils.createTempFile(".zip");
+			FileUtils.copy(path, temp, false);
 
-			try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(path));
-					ZipInputStream in = new ZipInputStream(Files.newInputStream(temp))) {
+			try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(path));
+					ZipInputStream in = new ZipInputStream(new FileInputStream(temp))) {
 				String clst = CLST_PATH;
 				boolean clstReplaced = false;
 				ZipEntry entry = in.getNextEntry();
 				while (entry != null) {
 					String entryName = entry.getName();
 					ZipEntry copyEntry = new ZipEntry(entryName);
-					copyEntry.setLastModifiedTime(entry.getLastModifiedTime()); // preserve modified time
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+						copyEntry.setLastModifiedTime(entry.getLastModifiedTime()); // preserve modified time
+					}
 					out.putNextEntry(copyEntry);
 					if (entryName.equals(clst)) {
 						save(out);

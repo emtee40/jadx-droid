@@ -1,8 +1,11 @@
 package jadx.plugins.mappings.save;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,7 +95,7 @@ public class MappingExporter {
 		return vars;
 	}
 
-	public void exportMappings(Path path, JadxCodeData codeData, MappingFormat mappingFormat) {
+	public void exportMappings(File path, JadxCodeData codeData, MappingFormat mappingFormat) {
 		MemoryMappingTree mappingTree = new MemoryMappingTree();
 		// Map < SrcName >
 		Set<String> mappedClasses = new HashSet<>();
@@ -137,7 +140,7 @@ public class MappingExporter {
 			if (mappingFormat.hasSingleFile()) {
 				FileUtils.deleteFileIfExists(path);
 				FileUtils.makeDirsForFile(path);
-				Files.createFile(path);
+				path.createNewFile();
 			} else {
 				FileUtils.makeDirs(path);
 			}
@@ -248,12 +251,13 @@ public class MappingExporter {
 				loadedMappingTree.accept(mappingTree);
 			}
 			// Write file
-			MappingWriter writer = MappingWriter.create(path, mappingFormat);
-			mappingTree.accept(writer);
-			mappingTree.visitEnd();
-			writer.close();
+			try (Writer w = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(path)));
+				 MappingWriter writer = MappingWriter.create(w, mappingFormat)) {
+				mappingTree.accept(writer);
+				mappingTree.visitEnd();
+			}
 		} catch (IOException e) {
-			LOG.error("Failed to save deobfuscation map file '{}'", path.toAbsolutePath(), e);
+			LOG.error("Failed to save deobfuscation map file '{}'", path.getAbsolutePath(), e);
 		}
 	}
 

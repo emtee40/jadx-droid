@@ -501,7 +501,7 @@ public abstract class IntegrationTest extends TestUtils {
 	}
 
 	private List<File> compileSourceFiles(List<File> compileFileList) throws IOException {
-		Path outTmp = FileUtils.createTempDir("jadx-tmp-classes");
+		File outTmp = FileUtils.createTempDir("jadx-tmp-classes");
 		sourceCompiler = new TestCompiler(compilerOptions);
 		List<File> files = sourceCompiler.compileFiles(compileFileList, outTmp);
 		if (saveTestJar) {
@@ -510,12 +510,12 @@ public abstract class IntegrationTest extends TestUtils {
 		return files;
 	}
 
-	private void saveToJar(List<File> files, Path baseDir) throws IOException {
+	private void saveToJar(List<File> files, File baseDir) throws IOException {
 		Path jarFile = Files.createTempFile("tests-" + getTestName() + '-', ".jar");
 		try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(jarFile))) {
 			for (File file : files) {
 				Path fullPath = file.toPath();
-				Path relativePath = baseDir.relativize(fullPath);
+				Path relativePath = baseDir.toPath().relativize(fullPath);
 				JarEntry entry = new JarEntry(relativePath.toString());
 				jar.putNextEntry(entry);
 				jar.write(Files.readAllBytes(fullPath));

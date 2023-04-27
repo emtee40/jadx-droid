@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,9 +27,8 @@ public class JavaInputLoader {
 
 	private int classUniqId = 1;
 
-	public List<JavaClassReader> collectFiles(List<Path> inputFiles) {
+	public List<JavaClassReader> collectFiles(List<File> inputFiles) {
 		return inputFiles.stream()
-				.map(Path::toFile)
 				.map(this::loadFromFile)
 				.filter(list -> !list.isEmpty())
 				.flatMap(Collection::stream)
@@ -70,7 +68,7 @@ public class JavaInputLoader {
 			if (file != null) {
 				return collectFromZip(file, name);
 			}
-			File zipFile = CommonFileUtils.saveToTempFile(magic, in, ".zip").toFile();
+			File zipFile = CommonFileUtils.saveToTempFile(magic, in, ".zip");
 			List<JavaClassReader> readers = collectFromZip(zipFile, concatSource(parentFileName, name));
 			CommonFileUtils.safeDeleteFile(zipFile);
 			return readers;

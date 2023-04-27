@@ -1,12 +1,11 @@
 package jadx.plugins.input.javaconvert;
 
+import android.os.Build;
+
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.jar.JarEntry;
@@ -29,7 +28,7 @@ public class JavaConvertLoader {
 		this.options = options;
 	}
 
-	public ConvertResult process(List<Path> input) {
+	public ConvertResult process(List<File> input) {
 		ConvertResult result = new ConvertResult();
 		processJars(input, result);
 		processAars(input, result);
@@ -37,32 +36,30 @@ public class JavaConvertLoader {
 		return result;
 	}
 
-	private void processJars(List<Path> input, ConvertResult result) {
-		PathMatcher jarMatcher = FileSystems.getDefault().getPathMatcher("glob:**.jar");
+	private void processJars(List<File> input, ConvertResult result) {
 		input.stream()
-				.filter(jarMatcher::matches)
+				.filter(file -> file.getName().endsWith(".jar"))
 				.forEach(path -> {
 					try {
 						convertJar(result, path);
 					} catch (Exception e) {
-						LOG.error("Failed to convert file: {}", path.toAbsolutePath(), e);
+						LOG.error("Failed to convert file: {}", path.getAbsolutePath(), e);
 					}
 				});
 	}
 
-	private void processClassFiles(List<Path> input, ConvertResult result) {
-		PathMatcher jarMatcher = FileSystems.getDefault().getPathMatcher("glob:**.class");
-		List<Path> clsFiles = input.stream()
-				.filter(jarMatcher::matches)
+	private void processClassFiles(List<File> input, ConvertResult result) {
+		List<File> clsFiles = input.stream()
+				.filter(file -> file.getName().endsWith(".class"))
 				.collect(Collectors.toList());
 		if (clsFiles.isEmpty()) {
 			return;
 		}
 		try {
 			LOG.debug("Converting class files ...");
-			Path jarFile = Files.createTempFile("jadx-", ".jar");
-			try (JarOutputStream jo = new JarOutputStream(Files.newOutputStream(jarFile))) {
-				for (Path file : clsFiles) {
+			File jarFile = File.createTempFile("jadx-", ".jar");
+			try (JarOutputStream jo = new JarOutputStream(new FileOutputStream(jarFile))) {
+				for (File file : clsFiles) {
 					String clsName = AsmUtils.getNameFromClassFile(file);
 					if (clsName == null || !ZipSecurity.isValidZipEntryName(clsName)) {
 						throw new IOException("Can't read class name from file: " + file);
@@ -78,15 +75,14 @@ public class JavaConvertLoader {
 		}
 	}
 
-	private void processAars(List<Path> input, ConvertResult result) {
-		PathMatcher aarMatcher = FileSystems.getDefault().getPathMatcher("glob:**.aar");
+	private void processAars(List<File> input, ConvertResult result) {
 		input.stream()
-				.filter(aarMatcher::matches)
-				.forEach(path -> ZipSecurity.readZipEntries(path.toFile(), (entry, in) -> {
+				.filter(file -> file.getName().endsWith(".aar"))
+				.forEach(path -> ZipSecurity.readZipEntries(path, (entry, in) -> {
 					try {
 						String entryName = entry.getName();
 						if (entryName.endsWith(".jar")) {
-							Path tempJar = CommonFileUtils.saveToTempFile(in, ".jar");
+							File tempJar = CommonFileUtils.saveToTempFile(in, ".jar");
 							result.addTempPath(tempJar);
 							LOG.debug("Loading jar: {} ...", entryName);
 							convertJar(result, tempJar);
@@ -97,16 +93,16 @@ public class JavaConvertLoader {
 				}));
 	}
 
-	private void convertJar(ConvertResult result, Path path) throws Exception {
+	private void convertJar(ConvertResult result, File path) throws Exception {
 		if (repackAndConvertJar(result, path)) {
 			return;
 		}
 		convertSimpleJar(result, path);
 	}
 
-	private boolean repackAndConvertJar(ConvertResult result, Path path) throws Exception {
+	private boolean repackAndConvertJar(ConvertResult result, File path) throws Exception {
 		// check if jar need a full repackage
-		Boolean repackNeeded = ZipSecurity.visitZipEntries(path.toFile(), (zipFile, zipEntry) -> {
+		Boolean repackNeeded = ZipSecurity.visitZipEntries(path, (zipFile, zipEntry) -> {
 			String entryName = zipEntry.getName();
 			if (zipEntry.isDirectory()) {
 				if (entryName.equals("BOOT-INF/")) {
@@ -127,11 +123,11 @@ public class JavaConvertLoader {
 		if (!Objects.equals(repackNeeded, Boolean.TRUE)) {
 			return false;
 		}
-		LOG.debug("Repacking jar file: {} ...", path.toAbsolutePath());
-		Path jarFile = Files.createTempFile("jadx-classes-", ".jar");
+		LOG.debug("Repacking jar file: {} ...", path.getAbsolutePath());
+		File jarFile = File.createTempFile("jadx-classes-", ".jar");
 		result.addTempPath(jarFile);
-		try (JarOutputStream jo = new JarOutputStream(Files.newOutputStream(jarFile))) {
-			ZipSecurity.readZipEntries(path.toFile(), (entry, in) -> {
+		try (JarOutputStream jo = new JarOutputStream(new FileOutputStream(jarFile))) {
+			ZipSecurity.readZipEntries(path, (entry, in) -> {
 				try {
 					String entryName = entry.getName();
 					if (entryName.endsWith(".class")) {
@@ -145,9 +141,13 @@ public class JavaConvertLoader {
 						if (clsName == null || !ZipSecurity.isValidZipEntryName(clsName)) {
 							throw new IOException("Can't read class name from file: " + entryName);
 						}
-						addJarEntry(jo, clsName + ".class", clsFileContent, entry.getLastModifiedTime());
+						if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+							addJarEntry(jo, clsName + ".class", clsFileContent, entry.getLastModifiedTime().toMillis());
+						} else {
+							addJarEntry(jo, clsName + ".class", clsFileContent, 0);
+						}
 					} else if (entryName.endsWith(".jar")) {
-						Path tempJar = CommonFileUtils.saveToTempFile(in, ".jar");
+						File tempJar = CommonFileUtils.saveToTempFile(in, ".jar");
 						result.addTempPath(tempJar);
 						convertJar(result, tempJar);
 					}
@@ -160,17 +160,17 @@ public class JavaConvertLoader {
 		return true;
 	}
 
-	private void convertSimpleJar(ConvertResult result, Path path) throws Exception {
-		Path tempDirectory = Files.createTempDirectory("jadx-");
+	private void convertSimpleJar(ConvertResult result, File path) throws Exception {
+		File tempDirectory = Files.createTempDirectory("jadx-").toFile();
 		result.addTempPath(tempDirectory);
 		LOG.debug("Converting to dex ...");
 		convert(path, tempDirectory);
-		List<Path> dexFiles = collectFilesInDir(tempDirectory);
-		LOG.debug("Converted {} to {} dex", path.toAbsolutePath(), dexFiles.size());
+		List<File> dexFiles = collectFilesInDir(tempDirectory);
+		LOG.debug("Converted {} to {} dex", path.getAbsolutePath(), dexFiles.size());
 		result.addConvertedFiles(dexFiles);
 	}
 
-	private void convert(Path path, Path tempDirectory) {
+	private void convert(File path, File tempDirectory) {
 		JavaConvertOptions.Mode mode = options.getMode();
 		switch (mode) {
 			case DX:
@@ -204,27 +204,25 @@ public class JavaConvertLoader {
 		}
 	}
 
-	private static List<Path> collectFilesInDir(Path tempDirectory) throws IOException {
-		PathMatcher dexMatcher = FileSystems.getDefault().getPathMatcher("glob:**.dex");
-		try (Stream<Path> pathStream = Files.walk(tempDirectory, 1)) {
-			return pathStream
-					.filter(p -> Files.isRegularFile(p, LinkOption.NOFOLLOW_LINKS))
-					.filter(dexMatcher::matches)
+	private static List<File> collectFilesInDir(File tempDirectory) throws IOException {
+		try (Stream<File> walk = Stream.of(tempDirectory.listFiles())) {
+			return walk.filter(file -> !file.isDirectory())
+					.filter(file -> file.getName().matches(".dex"))
 					.collect(Collectors.toList());
 		}
 	}
 
-	private static void addFileToJar(JarOutputStream jar, Path source, String entryName) throws IOException {
-		byte[] fileContent = Files.readAllBytes(source);
-		FileTime lastModifiedTime = Files.getLastModifiedTime(source, LinkOption.NOFOLLOW_LINKS);
+	private static void addFileToJar(JarOutputStream jar, File source, String entryName) throws IOException {
+		byte[] fileContent = Files.readAllBytes(source.toPath());
+		long lastModifiedTime = source.lastModified();
 		addJarEntry(jar, entryName, fileContent, lastModifiedTime);
 	}
 
 	private static void addJarEntry(JarOutputStream jar, String entryName, byte[] content,
-			FileTime modTime) throws IOException {
+			long modTime) throws IOException {
 		JarEntry entry = new JarEntry(entryName);
-		if (modTime != null) {
-			entry.setTime(modTime.toMillis());
+		if (modTime != 0) {
+			entry.setTime(modTime);
 		}
 		jar.putNextEntry(entry);
 		jar.write(content);

@@ -1,7 +1,6 @@
 package jadx.core.deobf;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.File;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +32,8 @@ public class SaveDeobfMapping extends AbstractVisitor {
 			return;
 		}
 		DeobfPresets mapping = DeobfPresets.build(root);
-		Path deobfMapFile = mapping.getDeobfMapFile();
-		if (mode == GeneratedRenamesMappingFileMode.READ_OR_SAVE && Files.exists(deobfMapFile)) {
+		File deobfMapFile = mapping.getDeobfMapFile();
+		if (mode == GeneratedRenamesMappingFileMode.READ_OR_SAVE && deobfMapFile.exists()) {
 			return;
 		}
 		try {
@@ -42,7 +41,7 @@ public class SaveDeobfMapping extends AbstractVisitor {
 			mapping.fill(root);
 			mapping.save();
 		} catch (Exception e) {
-			LOG.error("Failed to save deobfuscation map file '{}'", deobfMapFile.toAbsolutePath(), e);
+			LOG.error("Failed to save deobfuscation map file '{}'", deobfMapFile.getAbsolutePath(), e);
 		}
 	}
 

@@ -1,8 +1,8 @@
 package jadx.plugins.input.java;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
@@ -33,11 +33,11 @@ public class JavaInputPlugin implements JadxPlugin {
 		context.addCodeInput(JavaInputPlugin::loadClassFiles);
 	}
 
-	public static ICodeLoader loadClassFiles(List<Path> inputFiles) {
+	public static ICodeLoader loadClassFiles(List<File> inputFiles) {
 		return loadClassFiles(inputFiles, null);
 	}
 
-	public static ICodeLoader loadClassFiles(List<Path> inputFiles, @Nullable Closeable closeable) {
+	public static ICodeLoader loadClassFiles(List<File> inputFiles, @Nullable Closeable closeable) {
 		List<JavaClassReader> readers = new JavaInputLoader().collectFiles(inputFiles);
 		if (readers.isEmpty()) {
 			return EmptyCodeLoader.INSTANCE;

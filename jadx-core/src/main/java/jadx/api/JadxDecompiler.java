@@ -2,7 +2,6 @@ package jadx.api;
 
 import java.io.Closeable;
 import java.io.File;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -139,8 +138,8 @@ public final class JadxDecompiler implements Closeable {
 
 	private void loadInputFiles() {
 		loadedInputs.clear();
-		List<Path> inputPaths = Utils.collectionMap(args.getInputFiles(), File::toPath);
-		List<Path> inputFiles = FileUtils.expandDirs(inputPaths);
+		List<File> inputPaths = args.getInputFiles();
+		List<File> inputFiles = FileUtils.expandDirs(inputPaths);
 		long start = System.currentTimeMillis();
 		for (JadxCodeInput codeLoader : pluginManager.getCodeInputs()) {
 			ICodeLoader loader = codeLoader.loadFiles(inputFiles);

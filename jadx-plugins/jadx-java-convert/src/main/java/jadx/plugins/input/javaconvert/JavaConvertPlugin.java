@@ -1,6 +1,6 @@
 package jadx.plugins.input.javaconvert;
 
-import java.nio.file.Path;
+import java.io.File;
 import java.util.List;
 
 import jadx.api.plugins.JadxPlugin;
@@ -36,7 +36,7 @@ public class JavaConvertPlugin implements JadxPlugin, JadxCodeInput {
 	}
 
 	@Override
-	public ICodeLoader loadFiles(List<Path> input) {
+	public ICodeLoader loadFiles(List<File> input) {
 		ConvertResult result = loader.process(input);
 		if (result.isEmpty()) {
 			result.close();

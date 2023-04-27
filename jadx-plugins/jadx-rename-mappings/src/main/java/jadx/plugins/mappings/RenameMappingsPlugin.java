@@ -1,7 +1,6 @@
 package jadx.plugins.mappings;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.File;
 
 import jadx.api.JadxArgs;
 import jadx.api.args.UserRenamesMappingsMode;
@@ -30,8 +29,8 @@ public class RenameMappingsPlugin implements JadxPlugin {
 		if (args.getUserRenamesMappingsMode() == UserRenamesMappingsMode.IGNORE) {
 			return;
 		}
-		Path mappingsPath = args.getUserRenamesMappingsPath();
-		if (mappingsPath == null || !Files.isReadable(mappingsPath)) {
+		File mappingsPath = args.getUserRenamesMappingsPath();
+		if (mappingsPath == null || !mappingsPath.canRead()) {
 			return;
 		}
 		context.addPass(new LoadMappingsPass(options));
@@ -42,14 +41,13 @@ public class RenameMappingsPlugin implements JadxPlugin {
 		context.registerInputsHashSupplier(() -> FileUtils.md5Sum(getInputsHashString(mappingsPath)));
 	}
 
-	private String getInputsHashString(Path mappingsPath) {
+	private String getInputsHashString(File mappingsPath) {
 		return getFileHashString(mappingsPath) + ':' + options.getOptionsHashString();
 	}
 
-	private static String getFileHashString(Path mappingsPath) {
+	private static String getFileHashString(File mappingsPath) {
 		try {
-			return mappingsPath.toAbsolutePath().normalize()
-					+ ":" + Files.getLastModifiedTime(mappingsPath).toMillis();
+			return mappingsPath.getAbsolutePath() + ":" + mappingsPath.lastModified();
 		} catch (Exception e) {
 			return "";
 		}

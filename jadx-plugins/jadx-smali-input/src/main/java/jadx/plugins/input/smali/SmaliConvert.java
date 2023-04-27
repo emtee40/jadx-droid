@@ -2,13 +2,10 @@ package jadx.plugins.input.smali;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.PathMatcher;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -24,16 +21,16 @@ public class SmaliConvert implements Closeable {
 	private static final Logger LOG = LoggerFactory.getLogger(SmaliConvert.class);
 
 	@Nullable
-	private Path tmpDex;
+	private File tmpDex;
 
-	public boolean execute(List<Path> input) {
-		List<Path> smaliFiles = filterSmaliFiles(input);
+	public boolean execute(List<File> input) {
+		List<File> smaliFiles = filterSmaliFiles(input);
 		if (smaliFiles.isEmpty()) {
 			return false;
 		}
 		LOG.debug("Compiling smali files: {}", smaliFiles.size());
 		try {
-			this.tmpDex = Files.createTempFile("jadx-", ".dex");
+			this.tmpDex = File.createTempFile("jadx-", ".dex");
 			if (compileSmali(tmpDex, smaliFiles)) {
 				return true;
 			}
@@ -44,14 +41,14 @@ public class SmaliConvert implements Closeable {
 		return false;
 	}
 
-	private static boolean compileSmali(Path output, List<Path> inputFiles) throws IOException {
+	private static boolean compileSmali(File output, List<File> inputFiles) throws IOException {
 		SmaliOptions options = new SmaliOptions();
-		options.outputDexFile = output.toAbsolutePath().toString();
+		options.outputDexFile = output.getAbsolutePath();
 		options.verboseErrors = true;
 		options.apiLevel = 27; // TODO: add as plugin option
 
 		List<String> inputFileNames = inputFiles.stream()
-				.map(p -> p.toAbsolutePath().toString())
+				.map(File::getAbsolutePath)
 				.distinct()
 				.collect(Collectors.toList());
 
@@ -79,14 +76,13 @@ public class SmaliConvert implements Closeable {
 		}
 	}
 
-	private List<Path> filterSmaliFiles(List<Path> input) {
-		PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:**.smali");
+	private List<File> filterSmaliFiles(List<File> input) {
 		return input.stream()
-				.filter(matcher::matches)
+				.filter(file -> file.getName().endsWith(".smali"))
 				.collect(Collectors.toList());
 	}
 
-	public List<Path> getDexFiles() {
+	public List<File> getDexFiles() {
 		if (tmpDex == null) {
 			return Collections.emptyList();
 		}
@@ -95,12 +91,8 @@ public class SmaliConvert implements Closeable {
 
 	@Override
 	public void close() {
-		try {
-			if (tmpDex != null) {
-				Files.deleteIfExists(tmpDex);
-			}
-		} catch (Exception e) {
-			LOG.error("Failed to remove tmp dex file: {}", tmpDex, e);
+		if (tmpDex != null && tmpDex.exists() && !tmpDex.delete()) {
+			LOG.error("Failed to remove tmp dex file: {}", tmpDex);
 		}
 	}
 }
