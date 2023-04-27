@@ -1,8 +1,8 @@
 plugins {
-	id 'jadx-library'
-
 	id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
+
+apply from: "$gradle.ext.jadxRoot/common.gradle"
 
 dependencies {
 	api(project(":jadx-core"))
@@ -14,13 +14,5 @@ dependencies {
 
 	constraints {
 		runtimeOnly 'org.ow2.asm:asm:9.5'
-	}
-}
-
-publishing {
-	publications {
-		shadow(MavenPublication) { publication ->
-			project.shadow.component(publication)
-		}
 	}
 }

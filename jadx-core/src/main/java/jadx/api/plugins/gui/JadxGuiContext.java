@@ -3,8 +3,6 @@ package jadx.api.plugins.gui;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.swing.KeyStroke;
-
 import org.jetbrains.annotations.Nullable;
 
 import jadx.api.metadata.ICodeNodeRef;
@@ -26,7 +24,7 @@ public interface JadxGuiContext {
 	 *
 	 * @param name       entry title
 	 * @param enabled    check if entry should be enabled, called on popup creation
-	 * @param keyBinding optional assigned keybinding {@link KeyStroke#getKeyStroke(String)}
+	 * @param keyBinding optional assigned keybinding {@code KeyStroke#getKeyStroke(String)}
 	 */
 	void addPopupMenuAction(String name,
 			@Nullable Function<ICodeNodeRef, Boolean> enabled,
@@ -37,7 +35,7 @@ public interface JadxGuiContext {
 	 * Attach new key binding to main window
 	 *
 	 * @param id         unique ID string
-	 * @param keyBinding keybinding string {@link KeyStroke#getKeyStroke(String)}
+	 * @param keyBinding keybinding string {@code KeyStroke#getKeyStroke(String)}
 	 * @param action     runnable action
 	 * @return false if already registered
 	 */

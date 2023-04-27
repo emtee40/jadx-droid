@@ -15,7 +15,7 @@ package jadx.api.plugins.input.data.attributes;
 public interface IJadxAttrType<T extends IJadxAttribute> {
 
 	static <A extends IJadxAttribute> IJadxAttrType<A> create() {
-		return new IJadxAttrType<>() {
+		return new IJadxAttrType<A>() {
 		};
 	}
 }

@@ -1,3 +1,2 @@
-plugins {
-	id 'jadx-library'
-}
+apply from: "$gradle.ext.jadxRoot/common.gradle"
+

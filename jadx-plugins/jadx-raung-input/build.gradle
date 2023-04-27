@@ -1,6 +1,4 @@
-plugins {
-	id 'jadx-library'
-}
+apply from: "$gradle.ext.jadxRoot/common.gradle"
 
 dependencies {
 	api(project(":jadx-core"))

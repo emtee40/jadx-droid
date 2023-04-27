@@ -1,176 +1,28 @@
 //file:noinspection UnnecessaryQualifiedReference
 
-plugins {
-	id 'com.github.ben-manes.versions' version '0.46.0'
-	id 'com.diffplug.spotless' version '6.18.0'
-
-	id 'org.jetbrains.kotlin.jvm' version '1.8.20'
+buildscript {
+	repositories {
+		google()
+		mavenCentral()
+	}
+	dependencies {
+		classpath 'com.android.tools.build:gradle:7.4.0'
+	}
 }
 
-ext.jadxVersion = System.getenv('JADX_VERSION') ?: "dev"
+ext.jadxVersion = "1.4.7"
 version = jadxVersion
 println("jadx version: ${jadxVersion}")
 
 allprojects {
-	apply plugin: 'java'
-	apply plugin: 'kotlin'
-	apply plugin: 'checkstyle'
-	apply plugin: 'com.diffplug.spotless'
-
-	version = jadxVersion
-
-	sourceCompatibility = JavaVersion.VERSION_11
-	targetCompatibility = JavaVersion.VERSION_11
-
-	compileJava {
-		options.encoding = "UTF-8"
-	}
-
-	tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask.class)
-			.configureEach {
-				compilerOptions {
-					jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-				}
-			}
-
-	jar {
-		manifest {
-			mainAttributes('jadx-version': jadxVersion)
-		}
-	}
-
-	dependencies {
-		implementation 'org.slf4j:slf4j-api:2.0.7'
-		compileOnly 'org.jetbrains:annotations:24.0.1'
-
-		testImplementation 'ch.qos.logback:logback-classic:1.4.7'
-		testImplementation 'org.hamcrest:hamcrest-library:2.2'
-		testImplementation 'org.mockito:mockito-core:5.3.0'
-		testImplementation 'org.assertj:assertj-core:3.24.2'
-
-		testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
-		testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
-
-		testCompileOnly 'org.jetbrains:annotations:24.0.1'
-	}
-
-	test {
-		useJUnitPlatform()
-		maxParallelForks = Runtime.runtime.availableProcessors()
-	}
-
 	repositories {
-		mavenLocal()
 		mavenCentral()
 		google()
 	}
 
-	spotless {
-		java {
-			importOrderFile "$rootDir/config/code-formatter/eclipse.importorder"
-			eclipse().configFile "$rootDir/config/code-formatter/eclipse.xml"
-			removeUnusedImports()
-
-			lineEndings(com.diffplug.spotless.LineEnding.UNIX)
-			encoding("UTF-8")
-			trimTrailingWhitespace()
-			endWithNewline()
-		}
-		kotlin {
-			ktlint()
-					.setUseExperimental(false)
-					.editorConfigOverride([indent_style: "tab"])
-
-			lineEndings(com.diffplug.spotless.LineEnding.UNIX)
-			encoding("UTF-8")
-			trimTrailingWhitespace()
-			endWithNewline()
-		}
-		format 'misc', {
-			target '**/*.gradle', '**/*.xml', '**/.gitignore', '**/.properties'
-			targetExclude ".gradle/**", ".idea/**", "*/build/**"
-
-			lineEndings(com.diffplug.spotless.LineEnding.UNIX)
-			encoding("UTF-8")
-			trimTrailingWhitespace()
-			endWithNewline()
+	gradle.projectsEvaluated {
+		tasks.withType(JavaCompile) {
+			options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
 		}
 	}
 }
-
-dependencyUpdates {
-	resolutionStrategy {
-		componentSelection { rules ->
-			rules.all { ComponentSelection selection ->
-				boolean rejected = ['alpha', 'beta', 'dev', 'rc', 'cr', 'm', 'atlassian'].any { qualifier ->
-					selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
-				}
-				if (rejected) {
-					selection.reject('Release candidate')
-				}
-			}
-		}
-	}
-}
-
-task copyArtifacts(type: Copy) {
-	from tasks.getByPath(":jadx-cli:installDist")
-	from tasks.getByPath(":jadx-gui:installDist")
-	into layout.buildDirectory.dir("jadx")
-	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-task pack(type: Zip) {
-	from copyArtifacts
-	archiveFileName = "jadx-${jadxVersion}.zip"
-	destinationDirectory = layout.buildDirectory
-}
-
-task copyExe(type: Copy) {
-	group 'jadx'
-	description = 'Copy exe to build dir'
-
-	// next task dependencies not needed, but gradle throws warning because of same output dir
-	mustRunAfter jar
-	mustRunAfter pack
-
-	from tasks.getByPath('jadx-gui:createExe')
-	include '*.exe'
-	into layout.buildDirectory
-	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-task distWinBundle(type: Copy, dependsOn: 'jadx-gui:distWinWithJre') {
-	group 'jadx'
-	description = 'Copy bundle to build dir'
-	mustRunAfter pack
-	destinationDir buildDir
-	from(tasks.getByPath('jadx-gui:distWinWithJre').outputs) {
-		include '*.zip'
-	}
-	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-task dist {
-	group 'jadx'
-	description = 'Build jadx distribution zip'
-
-	dependsOn(pack)
-
-	OperatingSystem os = org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.currentOperatingSystem;
-	if (os.isWindows()) {
-		if (project.hasProperty("bundleJRE")) {
-			println("Build win bundle with JRE")
-			dependsOn('distWinBundle')
-		} else {
-			dependsOn('copyExe')
-		}
-	}
-}
-
-task cleanBuildDir(type: Delete) {
-	group 'jadx'
-	delete buildDir
-}
-
-clean.dependsOn(cleanBuildDir)

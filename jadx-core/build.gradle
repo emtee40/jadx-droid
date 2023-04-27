@@ -1,6 +1,4 @@
-plugins {
-	id 'jadx-library'
-}
+apply from: "$gradle.ext.jadxRoot/common.gradle"
 
 dependencies {
 	api(project(":jadx-plugins:jadx-input-api"))
@@ -22,8 +20,4 @@ dependencies {
 
 	testImplementation 'org.eclipse.jdt:ecj:3.33.0'
 	testImplementation 'tools.profiler:async-profiler:2.9'
-}
-
-test {
-	exclude '**/tmp/*'
 }
